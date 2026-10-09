@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Algoritmo de Dijkstra: visualizador paso a paso</title>
+<meta name="description" content="Visualizador interactivo del algoritmo de Dijkstra sobre grafos dirigidos y sin ciclos. Proyecto del curso Matemática Computacional, UPC.">
+<meta name="theme-color" content="#145C73">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23145C73'/%3E%3Cpath d='M9 22L23 10' stroke='white' stroke-width='2'/%3E%3Ccircle cx='9' cy='22' r='4' fill='white'/%3E%3Ccircle cx='23' cy='10' r='4' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#17212B; --ink-2:#4A5866; --paper:#F1F3F6; --panel:#FFFFFF;
+  --line:#D8DEE6; --line-2:#E9EDF2;
+  --accent:#145C73; --accent-dark:#0F4A5D; --focus:#1B6FD1;
+  --node:#EAF1F6; --node-line:#3C7391; --act:#F5B041; --vis:#ABEBC6;
+  --origin:#1E8449; --dest:#C0392B; --path:#C0392B; --relax:#E67E22; --edge:#8A94A0;
+  --serif:"Newsreader", Georgia, "Times New Roman", serif;
+  --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 var(--sans)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.skip{position:absolute;left:-999px;top:0;background:var(--ink);color:#fff;padding:8px 12px;z-index:10}
+.skip:focus{left:8px;top:8px}
+
+/* Encabezado */
+.top{background:var(--panel);border-top:4px solid #D71920;border-bottom:1px solid var(--line)}
+.top-in{max-width:1320px;margin:0 auto;padding:26px 24px 24px}
+h1{font:500 clamp(30px,4vw,42px)/1.1 var(--serif);letter-spacing:-.01em;margin:0 0 8px}
+.lede{margin:0;max-width:64ch;color:var(--ink-2)}
+
+/* Estructura */
+.app{max-width:1320px;margin:0 auto;padding:24px;display:grid;grid-template-columns:350px minmax(0,1fr);gap:24px;align-items:start}
+.controls{background:var(--panel);border:1px solid var(--line);border-radius:10px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+.step{padding:18px 18px 20px;border-bottom:1px solid var(--line-2)}
+.step:last-child{border-bottom:0}
+.step h2{display:flex;align-items:center;gap:10px;margin:0 0 12px;font:600 16px/1.2 var(--sans)}
+.num{flex:none;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600}
+.step h3{margin:18px 0 8px;font:600 14px/1.2 var(--sans)}
+label{display:block;font-size:13px;color:var(--ink-2);margin-bottom:4px}
+input,select{font:inherit;height:40px;width:100%;border:1px solid #B9C3CE;border-radius:6px;padding:0 10px;background:#fff;color:var(--ink)}
+.btn{font:600 14px var(--sans);height:40px;padding:0 14px;border-radius:6px;border:1px solid #B9C3CE;background:#fff;color:var(--ink);cursor:pointer}
+.btn:hover:not(:disabled){background:#F3F6F9}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover:not(:disabled){background:var(--accent-dark)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.wide{width:100%}
+.btn.text{border-color:transparent;background:none;color:var(--accent);padding:0;height:auto;text-align:left;text-decoration:underline;text-underline-offset:3px;margin-top:10px}
+.btn.text:hover{background:none;color:var(--accent-dark)}
+.stack{display:grid;gap:8px;margin-top:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.lista{list-style:none;margin:10px 0 0;padding:0;max-height:170px;overflow:auto;border:1px solid var(--line-2);border-radius:6px}
+.lista:empty::after{content:"Aún no hay aristas.";display:block;padding:10px;color:var(--ink-2);font-size:13px}
+.lista li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line-2);font-size:14px}
+.lista li:last-child{border-bottom:0}
+.lista .w{font-family:var(--mono);font-weight:600;color:var(--ink-2);margin-left:auto}
+.lista button{border:0;background:none;color:#8A3B32;font-size:18px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:4px}
+.lista button:hover{background:#FBEDEA}
+
+/* Escenario */
+.right{min-width:0}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stage-bar{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;padding:14px 18px}
+.progress-txt{min-width:0;flex:1 1 260px}
+.progress-txt strong{display:block;font-size:15px}
+.progress-txt span{display:block;color:var(--ink-2);font-size:14px;overflow-wrap:anywhere}
+.player{display:flex;flex-wrap:wrap;gap:6px}
+.player .btn{height:36px;padding:0 12px}
+.bar{height:3px;background:var(--line-2)}
+.bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.aviso{margin:0;padding:10px 18px;font-size:14px;border-bottom:1px solid var(--line-2)}
+.aviso[hidden]{display:none}
+.aviso.error{background:#FDF1EF;color:#8A2B20}
+.aviso.ok{background:#EFF8F2;color:#1B5E36}
+.canvas-wrap{background:#FBFCFD radial-gradient(#D3DAE2 1px,transparent 1px) 0 0/20px 20px}
+svg{display:block;width:100%;height:auto;max-height:78vh}
+.vacio{font:16px var(--sans);fill:var(--ink-2);text-anchor:middle}
+.arista{stroke:var(--edge);stroke-width:1.4;fill:none}
+.arista.rel{stroke:var(--relax);stroke-width:2.8}
+.arista.cam{stroke:var(--path);stroke-width:3.5}
+.peso{font:600 12px var(--sans);fill:var(--ink);text-anchor:middle;dominant-baseline:central;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}
+.nodo circle{fill:var(--node);stroke:var(--node-line);stroke-width:2;transition:fill .2s}
+.nodo.act circle{fill:var(--act)}
+.nodo.vis circle{fill:var(--vis)}
+.nodo.org circle{stroke:var(--origin);stroke-width:4}
+.nodo.dst circle{stroke:var(--dest);stroke-width:4}
+.nodo text{font:700 15px var(--sans);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.etq{font:600 12px var(--mono);fill:#8E1B12;text-anchor:middle;dominant-baseline:central;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;list-style:none;margin:0;padding:12px 18px;border-top:1px solid var(--line-2);font-size:13px;color:var(--ink-2)}
+.legend li{display:flex;align-items:center;gap:7px}
+.sw{width:14px;height:14px;border-radius:50%;border:2px solid var(--node-line);background:var(--node)}
+.sw.act{background:var(--act)}
+.sw.vis{background:var(--vis)}
+.sw.org{border-color:var(--origin);border-width:3px}
+.sw.dst{border-color:var(--dest);border-width:3px}
+.ln{width:20px;height:0;border-top:3px solid var(--relax)}
+.ln.cam{border-top-color:var(--path)}
+.result{padding:14px 18px;border-top:1px solid var(--line-2)}
+.result[hidden]{display:none}
+.result.ok{background:#F2FAF5}
+.result.warn{background:#FDF6EC}
+.result h3{margin:0 0 4px;font:600 15px var(--sans)}
+.result p{margin:2px 0}
+.ruta{font:600 16px var(--mono);overflow-wrap:anywhere}
+
+/* Detalle */
+.detail{margin-top:24px;background:var(--panel);border:1px solid var(--line);border-radius:10px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
+.detail section{padding:16px 18px;min-width:0}
+.detail section + section{border-left:1px solid var(--line-2)}
+.detail h2{margin:0 0 10px;font:600 15px var(--sans)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line-2)}
+thead th{font-size:13px;color:var(--ink-2);font-weight:600}
+tbody th{font-weight:700}
+.mono{font-family:var(--mono);font-weight:500}
+.st{display:inline-flex;align-items:center;gap:6px}
+.st::before{content:"";width:9px;height:9px;}
+</style>
+</head>
+<body>
+
+  <!-- Encabezado -->
+  <header class="top">
+    <div class="top-in">
+      <h1>Algoritmo de Dijkstra: visualizador paso a paso</h1>
+      <p class="lede">Visualizador interactivo del algoritmo de Dijkstra sobre grafos dirigidos y sin ciclos. Proyecto del curso Matemática Computacional, UPC.</p>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal de la Aplicación -->
+  <main class="app">
+    
+    <!-- Columna Izquierda: Panel de Controles -->
+    <aside class="controls">
+      
+      <!-- Paso 1: Configurar Nodos -->
+      <section class="step">
+        <h2><span class="num">1</span> Configurar Nodos</h2>
+        <div class="stack">
+          <label for="node-input">Añadir Nodo (Letra o Número)</label>
+          <div class="grid2">
+            <input type="text" id="node-input" placeholder="Ej. A">
+            <button class="btn primary" id="add-node-btn">Añadir</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Paso 2: Configurar Aristas -->
+      <section class="step">
+        <h2><span class="num">2</span> Configurar Aristas</h2>
+        <div class="stack">
+          <div class="grid3">
+            <div>
+              <label for="edge-from">Origen</label>
+              <select id="edge-from"></select>
+            </div>
+            <div>
+              <label for="edge-to">Destino</label>
+              <select id="edge-to"></select>
+            </div>
+            <div>
+              <label for="edge-weight">Peso</label>
+              <input type="number" id="edge-weight" min="1" value="1">
+            </div>
+          </div>
+          <button class="btn wide" id="add-edge-btn">Añadir Arista</button>
+          <ul class="lista" id="edges-list"></ul>
+        </div>
+      </section>
+
+      <!-- Paso 3: Ejecución -->
