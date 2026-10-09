@@ -1,170 +1,1351 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dijkstra Pathfinding Visualizer — Enterprise Edition</title>
-  <style>
-    :root {
-      --bg-main: #f8fafc;
-      --bg-surface: #ffffff;
-      --border-color: #e2e8f0;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --brand: #0284c7;
-      --brand-hover: #0369a1;
-      --brand-light: #e0f2fe;
-      
-      /* Algorithmic States Colors */
-      --color-idle: #e2e8f0;
-      --color-active: #f59e0b;
-      --color-visited: #10b981;
-      --color-source: #3b82f6;
-      --color-target: #ef4444;
-      --color-path: #ef4444;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1220">
+<title>Dijkstra Lab — Visualizador interactivo</title>
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg-main); color: var(--text-main); line-height: 1.5; padding: 24px; }
-    
-    .dashboard { max-width: 1440px; margin: 0 auto; display: grid; grid-template-columns: 380px 1fr; gap: 24px; height: calc(100vh - 48px); min-height: 700px; }
-    @media (max-width: 1024px) { .dashboard { grid-template-columns: 1fr; height: auto; } }
+<style>
+:root {
+  --bg: #0b1220;
+  --panel: #111c2e;
+  --panel2: #152238;
+  --line: #263750;
+  --text: #edf4ff;
+  --muted: #9aacc5;
+  --teal: #47e0c0;
+  --blue: #71a7ff;
+  --amber: #ffc66d;
+  --red: #ff7b86;
+  --green: #72e0a2;
+  --shadow: 0 18px 55px rgba(0,0,0,.22);
+}
 
-    /* Sidebar Controls */
-    .sidebar { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    header h1 { font-size: 20px; font-weight: 700; color: var(--text-main); letter-spacing: -0.02em; }
-    header p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
-    
-    .panel-section { border-top: 1px solid var(--border-color); padding-top: 16px; }
-    .panel-section h2 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-    .panel-section h2 .badge { background: var(--text-main); color: var(--bg-surface); width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+* { box-sizing: border-box; }
 
-    .form-group { margin-bottom: 12px; }
-    label { display: block; font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 4px; }
-    
-    .input-row { display: flex; gap: 8px; }
-    input, select { flex: 1; height: 38px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 0 12px; font-size: 14px; color: var(--text-main); outline: none; transition: border 0.15s ease; }
-    input:focus, select:focus { border-color: var(--brand); }
-    
-    button { height: 38px; padding: 0 16px; background: var(--brand); color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s ease; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-    button:hover { background: var(--brand-hover); }
-    button:disabled { background: var(--border-color); color: var(--text-muted); cursor: not-allowed; }
-    button.secondary { background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); }
-    button.secondary:hover { background: var(--border-color); }
-    button.danger { background: #fee2e2; color: #b91c1c; }
-    button.danger:hover { background: #fca5a5; }
+body {
+  margin: 0;
+  background: radial-gradient(ellipse at 10% 0%, #172b47 0, transparent 36%), var(--bg);
+  color: var(--text);
+  font: 15px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
 
-    .edge-list-container { max-height: 110px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 8px; }
-    .edge-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); }
-    .edge-item:last-child { border-bottom: none; }
-    .edge-item button { height: 22px; padding: 0 6px; font-size: 11px; background: transparent; color: #ef4444; border: 1px solid #fee2e2; }
-    .edge-item button:hover { background: #fee2e2; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
 
-    /* Workspace / Main Area */
-    .workspace { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
-    
-    .viewport-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: relative; flex: 1; min-height: 400px; }
-    
-    .toolbar { height: 56px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; background: #fafafa; }
-    .simulation-controls { display: flex; gap: 8px; }
-    .simulation-controls button { height: 32px; padding: 0 12px; font-size: 13px; }
-    
-    #canvas-svg { flex: 1; width: 100%; height: 100%; background: #ffffff; cursor: crosshair; user-select: none; }
-    
-    /* SVG Styling Mechanics */
-    .graph-edge { stroke: var(--color-idle); stroke-width: 3; stroke-linecap: round; transition: stroke 0.3s, stroke-width 0.3s; }
-    .graph-edge.active { stroke: var(--color-active); stroke-width: 5; }
-    .graph-edge.path { stroke: var(--color-path); stroke-width: 6; stroke-dasharray: none; }
-    
-    .edge-trigger { stroke: transparent; stroke-width: 12; cursor: pointer; fill: none; }
-    .edge-weight-bg { fill: var(--bg-surface); stroke: var(--border-color); stroke-width: 1; rx: 4; }
-    .edge-weight-text { font-size: 11px; font-weight: 700; fill: var(--text-main); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
-    
-    .graph-node { cursor: grab; transition: transform 0.1s ease; }
-    .graph-node:active { cursor: grabbing; }
-    .graph-node circle { fill: #f1f5f9; stroke: #475569; stroke-width: 2.5; transition: fill 0.3s, stroke 0.3s, stroke-width 0.3s; }
-    .graph-node text { font-size: 13px; font-weight: 700; fill: #0f172a; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
-    
-    /* Node State Mappings */
-    .graph-node.state-source circle { fill: var(--brand-light); stroke: var(--color-source); stroke-width: 4; }
-    .graph-node.state-target circle { fill: #fee2e2; stroke: var(--color-target); stroke-width: 4; }
-    .graph-node.state-active circle { fill: #fef3c7; stroke: var(--color-active); stroke-width: 4; }
-    .graph-node.state-visited circle { fill: #d1fae5; stroke: var(--color-visited); stroke-width: 3; }
+button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
 
-    /* Legend System */
-    .legend { display: flex; gap: 16px; padding: 12px 20px; border-top: 1px solid var(--border-color); background: var(--bg-main); font-size: 12px; font-weight: 500; flex-wrap: wrap; }
-    .legend-item { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
-    .legend-indicator { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.topbar {
+  border-bottom: 1px solid #263750;
+  background: rgba(11,18,32,.82);
+}
 
-    /* Data Feedback Area */
-    .data-analytics { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; height: 220px; }
-    @media (max-width: 768px) { .data-analytics { grid-template-columns: 1fr; height: auto; } }
-    .analytics-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .analytics-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
-    .table-wrapper { flex: 1; overflow-y: auto; }
-    
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-    th { font-weight: 600; color: var(--text-muted); padding: 6px 12px; background: var(--bg-main); position: sticky; top: 0; }
-    td { padding: 8px 12px; border-bottom: 1px solid var(--border-color); }
-    tr:last-child td { border-bottom: none; }
-    
-    .status-banner { font-size: 13px; font-weight: 500; color: var(--brand-hover); }
-    .placeholder-text { text-align: center; color: var(--text-muted); font-size: 13px; padding-top: 30px; }
-  </style>
+.top-inner {
+  max-width: 1500px;
+  margin: auto;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.brand { display: flex; gap: 14px; align-items: center; }
+
+.logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(135deg,var(--teal),#4b9cff);
+  display: grid;
+  place-items: center;
+  color: #071521;
+  font-weight: 900;
+  font-size: 22px;
+}
+
+.eyebrow {
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+
+h1 {
+  font-size: clamp(22px,3vw,32px);
+  line-height: 1.12;
+  margin: 3px 0 0;
+  letter-spacing: -.04em;
+}
+
+.top-sub { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+
+.top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.pill {
+  border: 1px solid #2b405b;
+  border-radius: 99px;
+  padding: 7px 12px;
+  color: #b9cbe1;
+  font-size: 12px;
+  background: #111c2e;
+}
+
+.layout {
+  max-width: 1500px;
+  margin: auto;
+  padding: 22px 28px 40px;
+  display: grid;
+  grid-template-columns: 320px minmax(0,1fr);
+  gap: 20px;
+}
+
+.sidebar { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+.card {
+  background: linear-gradient(180deg,rgba(21,34,56,.96),rgba(17,28,46,.98));
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.card-head {
+  padding: 16px 17px 12px;
+  border-bottom: 1px solid #25364d;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card-head h2, .card-head h3 { font-size: 14px; margin: 0; }
+
+.step-no {
+  display: inline-grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  background: #213650;
+  color: var(--teal);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  margin-right: 8px;
+}
+
+.card-body { padding: 16px 17px; }
+
+label { display: block; color: var(--muted); font-size: 12px; margin: 0 0 6px; }
+
+input, select {
+  width: 100%;
+  min-width: 0;
+  background: #0c1626;
+  border: 1px solid #30435d;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 11px;
+  height: 42px;
+}
+
+input::placeholder { color: #62748d; }
+
+.field { min-width: 0; }
+.row { display: flex; gap: 8px; align-items: end; }
+.row > * { flex: 1; }
+
+.grid3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr .8fr;
+  gap: 8px;
+}
+
+.btn {
+  border: 1px solid #344963;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #1a2a42;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 13px;
+  transition: transform .15s, border-color .15s, background .15s;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #5b789a;
+  background: #213653;
+}
+
+.btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
+.btn.primary { background: var(--teal); border-color: var(--teal); color: #071721; }
+.btn.primary:hover:not(:disabled) { background: #7af0d8; }
+.btn.ghost { background: transparent; }
+.btn.danger { color: #ff9ba3; }
+.btn.full { width: 100%; }
+.btn.small { padding: 6px 9px; font-size: 12px; }
+.btn-row { display: flex; gap: 8px; margin-top: 10px; }
+.btn-row > * { flex: 1; }
+
+.hint { font-size: 11px; color: #8194af; margin: 8px 0 0; }
+
+.list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.list:empty:after {
+  content: "Todavía no hay aristas.";
+  display: block;
+  padding: 10px;
+  color: #8194af;
+  font-size: 12px;
+  border: 1px dashed #30435d;
+  border-radius: 10px;
+}
+
+.list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 9px;
+  margin-bottom: 6px;
+  background: #0d1829;
+  border: 1px solid #25364d;
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+.edge-label { font-family: monospace; color: #dbe8fa; }
+.weight { margin-left: auto; color: var(--teal); font-weight: 800; }
+
+.remove {
+  border: 0;
+  background: transparent;
+  color: #ff9ba3;
+  font-size: 18px;
+  padding: 0 4px;
+}
+
+main { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 20px 22px;
+}
+
+.hero h2 { font-size: 20px; letter-spacing: -.03em; margin: 0 0 5px; }
+.hero p { margin: 0; color: var(--muted); font-size: 13px; max-width: 650px; }
+
+.stats { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+.stat {
+  min-width: 85px;
+  background: #0c1727;
+  border: 1px solid #283b55;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.stat span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.stat strong { font-size: 21px; letter-spacing: -.04em; }
+
+.graph-card { position: relative; }
+
+.graph-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border-bottom: 1px solid #263750;
+}
+
+.graph-toolbar h2 { font-size: 14px; margin: 0; }
+
+.legend { display: flex; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 11px; }
+.legend span { display: flex; align-items: center; gap: 6px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+.canvas {
+  position: relative;
+  background-color: #0d1727;
+  background-image: radial-gradient(#263750 1px,transparent 1px);
+  background-size: 22px 22px;
+  min-height: 390px;
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: clamp(390px,52vw,600px);
+  max-height: 68vh;
+  touch-action: none;
+}
+
+.empty-state {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: 25px;
+  pointer-events: none;
+}
+
+.empty-state strong { font-size: 18px; }
+.empty-state span { color: var(--muted); font-size: 13px; margin-top: 5px; }
+
+.edge { stroke: #52647c; stroke-width: 2; fill: none; }
+.edge.active { stroke: var(--amber); stroke-width: 3.5; }
+.edge.path { stroke: var(--teal); stroke-width: 4; }
+
+.edge-label-svg {
+  font-size: 12px;
+  font-weight: 800;
+  fill: #eaf2ff;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: #0d1727;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+
+.node { cursor: grab; }
+.node circle { fill: #1b3049; stroke: #6c8aa9; stroke-width: 2.5; transition: fill .18s,stroke .18s; }
+.node text { fill: #f4f8ff; font-weight: 800; font-size: 15px; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.node.source circle { stroke: var(--green); stroke-width: 4; }
+.node.target circle { stroke: var(--red); stroke-width: 4; }
+.node.current circle { fill: #a56818; stroke: var(--amber); stroke-width: 4; }
+.node.visited circle { fill: #175c4e; stroke: var(--teal); }
+.node.path-node circle { fill: #126b60; stroke: #6affdc; stroke-width: 4; }
+.node .dist { font-size: 11px; fill: #a9c2df; font-weight: 700; }
+
+.stage-foot {
+  padding: 12px 18px;
+  border-top: 1px solid #263750;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.run-card {
+  display: grid;
+  grid-template-columns: minmax(0,1.15fr) minmax(280px,.85fr);
+  gap: 0;
+}
+
+.run-main, .run-side { padding: 18px 20px; min-width: 0; }
+.run-side { border-left: 1px solid #263750; background: #0f1a2b; }
+
+.run-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.run-title h2 { font-size: 15px; margin: 0; }
+
+.status {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  padding: 5px 9px;
+  border-radius: 99px;
+  background: #1e3148;
+  color: #aac4e3;
+}
+
+.status.ready { color: var(--blue); }
+.status.running { color: var(--amber); }
+.status.done { color: var(--green); }
+
+.explanation { min-height: 62px; color: #c1d0e4; font-size: 13px; margin: 13px 0 16px; }
+
+.progress { height: 6px; background: #24354b; border-radius: 99px; overflow: hidden; margin: 10px 0 14px; }
+.progress div { height: 100%; width: 0; background: linear-gradient(90deg,var(--teal),var(--blue)); transition: width .25s; }
+
+.player { display: flex; gap: 8px; flex-wrap: wrap; }
+.player .btn { flex: 1; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { text-align: left; padding: 8px 7px; border-bottom: 1px solid #263750; }
+th { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .07em; }
+td:last-child, th:last-child { text-align: right; }
+tbody tr.current-row { background: #2a2b2a; }
+tbody tr.current-row td { color: var(--amber); }
+.distances { max-height: 235px; overflow: auto; }
+
+.route-box {
+  border: 1px solid #2c4960;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 12px;
+  background: #0b1726;
+}
+
+.route-box .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.route { font-family: monospace; font-size: 15px; font-weight: 800; color: var(--teal); overflow-wrap: anywhere; margin-top: 4px; }
+.route-cost { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+.notice { display: none; padding: 10px 12px; border-radius: 10px; font-size: 12px; margin-top: 10px; }
+.notice.show { display: block; }
+.notice.error { background: #3a1f2a; color: #ffb4ba; border: 1px solid #70323e; }
+.notice.success { background: #15382f; color: #a5f3c5; border: 1px solid #24614f; }
+
+.footer { text-align: center; color: #71849d; font-size: 11px; padding: 6px 0 0; }
+
+@media(max-width:1050px) {
+  .layout { grid-template-columns: 290px minmax(0,1fr); padding: 16px; }
+  .top-inner { padding: 20px 16px; }
+  .run-card { grid-template-columns: 1fr; }
+  .run-side { border-left: 0; border-top: 1px solid #263750; }
+  .hero { grid-template-columns: 1fr; }
+  .stats { justify-content: flex-start; }
+}
+
+@media(max-width:760px) {
+  .layout { grid-template-columns: 1fr; padding: 12px; }
+  .sidebar { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  .sidebar .card:last-child { grid-column: 1/-1; }
+  .top-inner { align-items: flex-start; }
+  .top-actions { display: none; }
+  .hero { padding: 16px; }
+  .canvas { min-height: 330px; }
+  svg { height: 390px; }
+  .run-main, .run-side { padding: 16px; }
+}
+
+@media(max-width:520px) {
+  .sidebar { grid-template-columns: 1fr; }
+  .sidebar .card:last-child { grid-column: auto; }
+  .grid3 { grid-template-columns: 1fr 1fr; }
+  .grid3 .field:last-child { grid-column: 1/-1; }
+  .brand { align-items: flex-start; }
+  .logo { width: 40px; height: 40px; }
+  .top-sub { max-width: 250px; }
+  .stats { display: grid; grid-template-columns: repeat(3,1fr); width: 100%; }
+  .stat { min-width: 0; padding: 8px; }
+  .stat strong { font-size: 18px; }
+  .graph-toolbar { align-items: flex-start; flex-direction: column; }
+  .legend { gap: 8px; }
+}
+</style>
 </head>
+
 <body>
 
-  <div class="dashboard">
-    <!-- Controles Izquierda -->
-    <aside class="sidebar">
-      <header>
-        <h1>Dijkstra Simulator</h1>
-        <p>Entorno Gráfico e Industrial de Grafos</p>
-      </header>
+<header class="topbar">
+  <div class="top-inner">
+    <div class="brand">
+      <div class="logo">D</div>
+      <div>
+        <div class="eyebrow">Matemática computacional · UPC</div>
+        <h1>Dijkstra <span style="color:var(--teal)">Lab</span></h1>
+        <p class="top-sub">Explora grafos y encuentra el camino más corto, paso a paso.</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="pill">● Algoritmo interactivo</span>
+      <span class="pill">Pesos positivos</span>
+    </div>
+  </div>
+</header>
 
-      <!-- Panel 1: Nodos -->
-      <section class="panel-section">
-        <h2><span class="badge">1</span> Gestión de Vértices</h2>
-        <div class="form-group">
-          <label for="node-name">Identificador del Nodo</label>
-          <div class="input-row">
-            <input type="text" id="node-name" placeholder="Ej: A" maxlength="4">
-            <button id="btn-add-node">Añadir</button>
+<div class="layout">
+  <aside class="sidebar">
+
+    <section class="card">
+      <div class="card-head">
+        <h2><span class="step-no">01</span>Diseña tu grafo</h2>
+      </div>
+      <div class="card-body">
+        <label for="nodeName">Nombre del nodo</label>
+        <div class="row">
+          <div class="field">
+            <input id="nodeName" maxlength="5" placeholder="Ej. A, B, 1…">
+          </div>
+          <button class="btn primary" id="addNode">Añadir</button>
+        </div>
+        <p class="hint">Usa letras o números. Puedes arrastrar los nodos para ordenarlos.</p>
+        <div class="btn-row">
+          <button class="btn full" id="sampleBtn">Cargar ejemplo</button>
+          <button class="btn full ghost" id="clearBtn">Reiniciar</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2><span class="step-no">02</span>Conecta los nodos</h2>
+      </div>
+      <div class="card-body">
+        <div class="grid3">
+          <div class="field">
+            <label for="fromNode">Origen</label>
+            <select id="fromNode"></select>
+          </div>
+          <div class="field">
+            <label for="toNode">Destino</label>
+            <select id="toNode"></select>
+          </div>
+          <div class="field">
+            <label for="edgeWeight">Peso</label>
+            <input id="edgeWeight" type="number" min="0" max="999" value="4">
           </div>
         </div>
-      </section>
+        <button class="btn full" id="addEdge" style="margin-top:10px">＋ Añadir arista</button>
+        <ul class="list" id="edgeList"></ul>
+        <p class="hint">Grafo dirigido: la arista A → B no implica que exista B → A. Los pesos deben ser no negativos.</p>
+      </div>
+    </section>
 
-      <!-- Panel 2: Aristas -->
-      <section class="panel-section">
-        <h2><span class="badge">2</span> Estructura de Aristas</h2>
-        <div class="form-group">
-          <div class="input-row" style="margin-bottom: 8px;">
-            <div style="flex:1;">
-              <label>Origen</label>
-              <select id="edge-source"></select>
-            </div>
-            <div style="flex:1;">
-              <label>Destino</label>
-              <select id="edge-target"></select>
-            </div>
+    <section class="card">
+      <div class="card-head">
+        <h2><span class="step-no">03</span>Define la búsqueda</h2>
+      </div>
+      <div class="card-body">
+        <div class="grid3">
+          <div class="field">
+            <label for="sourceNode">Inicio</label>
+            <select id="sourceNode"></select>
           </div>
-          <label>Costo Métrico (Peso)</label>
-          <div class="input-row">
-            <input type="number" id="edge-weight" min="1" value="1">
-            <button id="btn-add-edge" class="secondary">Conectar</button>
+          <div class="field">
+            <label for="targetNode">Destino</label>
+            <select id="targetNode"></select>
           </div>
-          <div class="edge-list-container" id="edge-list-output"></div>
+          <div class="field">
+            <label for="speed">Velocidad</label>
+            <select id="speed">
+              <option value="1200">Lenta</option>
+              <option value="700" selected>Normal</option>
+              <option value="300">Rápida</option>
+            </select>
+          </div>
         </div>
-      </section>
+        <button class="btn primary full" id="startBtn" style="margin-top:12px">▶ Ejecutar Dijkstra</button>
+        <p class="hint">Puedes avanzar manualmente o reproducir la explicación automática.</p>
+        <div id="notice" class="notice"></div>
+      </div>
+    </section>
+  </aside>
 
-      <!-- Panel 3: Procesamiento -->
-      <section class="panel-section" style="margin-top:auto;">
-        <h2><span class="badge">3</span> Motor de Cómputo</h2>
-        <div class="form-group" style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-          <div>
-            <label>Nodo Raíz</label>
-            <select id="sim-source"></select>
-          </div>
-          <div>
-            <label>Nodo Destino</label>
-            <select id="sim-target"></select>
+  <main>
+    <section class="card hero">
+      <div>
+        <div class="eyebrow">Laboratorio de grafos</div>
+        <h2>Visualiza cómo se construye la ruta óptima</h2>
+        <p>Observa cómo el algoritmo selecciona el nodo con menor distancia provisional, evalúa sus conexiones y actualiza los costos hasta encontrar el camino más corto.</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Nodos</span><strong id="nodeCount">0</strong></div>
+        <div class="stat"><span>Aristas</span><strong id="edgeCount">0</strong></div>
+        <div class="stat"><span>Distancia</span><strong id="bestDistance">—</strong></div>
+      </div>
+    </section>
+
+    <section class="card graph-card">
+      <div class="graph-toolbar">
+        <h2>Mapa del grafo <span style="color:var(--muted);font-weight:400">/ canvas interactivo</span></h2>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--green)"></i>Inicio</span>
+          <span><i class="dot" style="background:var(--red)"></i>Destino</span>
+          <span><i class="dot" style="background:var(--amber)"></i>Actual</span>
+          <span><i class="dot" style="background:var(--teal)"></i>Ruta final</span>
+        </div>
+      </div>
+
+      <div class="canvas">
+        <svg id="graph" viewBox="0 0 900 520" role="img" aria-label="Representación del grafo dirigido"></svg>
+        <div class="empty-state" id="emptyState">
+          <strong>Tu grafo empieza aquí</strong>
+          <span>Añade nodos o carga el ejemplo para comenzar.</span>
+        </div>
+      </div>
+
+      <div class="stage-foot">
+        <span id="graphTip">Consejo: arrastra los nodos para cambiar su posición.</span>
+        <span id="graphState">Esperando configuración</span>
+      </div>
+    </section>
+
+    <section class="card run-card">
+      <div class="run-main">
+        <div class="run-title">
+          <h2>Recorrido paso a paso</h2>
+          <span class="status ready" id="runStatus">LISTO</span>
+        </div>
+        <div class="progress"><div id="progressBar"></div></div>
+        <p class="explanation" id="explanation" aria-live="polite">
+          Configura el grafo, selecciona el origen y el destino, y pulsa “Ejecutar Dijkstra”.
+          Aquí aparecerá una explicación de cada operación.
+        </p>
+        <div class="player">
+          <button class="btn" id="prevBtn" disabled>← Anterior</button>
+          <button class="btn primary" id="playBtn" disabled>▶ Reproducir</button>
+          <button class="btn" id="nextBtn" disabled>Siguiente →</button>
+        </div>
+      </div>
+
+      <div class="run-side">
+        <h2 style="font-size:14px;margin:0 0 10px">Tabla de distancias</h2>
+        <div class="distances">
+          <table>
+            <thead>
+              <tr><th>Nodo</th><th>Distancia</th><th>Predecesor</th></tr>
+            </thead>
+            <tbody id="distanceTable">
+              <tr><td colspan="3" style="color:var(--muted)">Ejecuta el algoritmo para ver los valores.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="route-box">
+          <div class="label">Mejor ruta encontrada</div>
+          <div class="route" id="routeText">A → … → B</div>
+          <div class="route-cost" id="routeCost">Costo total: —</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer">Dijkstra Lab · Visualizador educativo · Funciona localmente en tu navegador</div>
+  </main>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const svg = $('graph');
+  const NS = 'http://www.w3.org/2000/svg';
+
+  let nodes = [];
+  let edges = [];
+  let positions = {};
+  let steps = [];
+  let stepIndex = -1;
+  let timer = null;
+  let dragNode = null;
+
+  let state = {
+    dist: {},
+    prev: {},
+    visited: [],
+    current: null,
+    activeEdge: null,
+    path: [],
+    done: false
+  };
+
+  const W = 900, H = 520, R = 25;
+
+  function notify(message, type = 'error') {
+    const box = $('notice');
+    box.textContent = message;
+    box.className = 'notice show ' + type;
+
+    clearTimeout(box._timeout);
+    box._timeout = setTimeout(() => {
+      box.classList.remove('show');
+    }, 4000);
+  }
+
+  function stopPlay() {
+    if (timer) clearInterval(timer);
+    timer = null;
+    $('playBtn').textContent = '▶ Reproducir';
+  }
+
+  function resetRun() {
+    stopPlay();
+    steps = [];
+    stepIndex = -1;
+
+    state = {
+      dist: {},
+      prev: {},
+      visited: [],
+      current: null,
+      activeEdge: null,
+      path: [],
+      done: false
+    };
+
+    $('runStatus').textContent = 'LISTO';
+    $('runStatus').className = 'status ready';
+
+    $('explanation').textContent =
+      'Configura el grafo, selecciona el origen y el destino, y pulsa “Ejecutar Dijkstra”. Aquí aparecerá una explicación de cada operación.';
+
+    $('progressBar').style.width = '0%';
+    $('prevBtn').disabled = true;
+    $('nextBtn').disabled = true;
+    $('playBtn').disabled = true;
+
+    $('distanceTable').innerHTML =
+      '<tr><td colspan="3" style="color:var(--muted)">Ejecuta el algoritmo para ver los valores.</td></tr>';
+
+    $('routeText').textContent = '—';
+    $('routeCost').textContent = 'Costo total: —';
+    $('bestDistance').textContent = '—';
+    $('graphState').textContent = 'Esperando configuración';
+
+    renderGraph();
+  }
+
+  function addNode(name) {
+    name = name.trim();
+
+    if (!name) return notify('Escribe una letra o número para el nodo.');
+    if (name.length > 5) return notify('El nombre del nodo debe tener como máximo 5 caracteres.');
+    if (nodes.includes(name)) return notify('Ese nodo ya existe. Elige otro nombre.');
+
+    nodes.push(name);
+
+    const angle = (nodes.length - 1) * 2.399;
+    const radius = Math.min(175, 45 + nodes.length * 15);
+
+    positions[name] = {
+      x: W / 2 + Math.cos(angle) * radius,
+      y: H / 2 + Math.sin(angle) * radius * .78
+    };
+
+    updateControls();
+    resetRun();
+    renderGraph();
+
+    $('nodeName').value = '';
+    $('nodeName').focus();
+  }
+
+  function addEdge() {
+    const from = $('fromNode').value;
+    const to = $('toNode').value;
+    const weight = Number($('edgeWeight').value);
+
+    if (!from || !to) {
+      return notify('Añade al menos dos nodos antes de conectar aristas.');
+    }
+
+    if (from === to) {
+      return notify('Para este visualizador, conecta dos nodos distintos.');
+    }
+
+    if (!Number.isFinite(weight) || weight < 0 || weight > 999) {
+      return notify('El peso debe ser un número entre 0 y 999.');
+    }
+
+    const existing = edges.findIndex(e => e.from === from && e.to === to);
+
+    if (existing >= 0) {
+      edges[existing].weight = weight;
+    } else {
+      edges.push({ from, to, weight });
+    }
+
+    updateControls();
+    resetRun();
+    renderGraph();
+
+    notify(
+      existing >= 0 ? 'Peso de la arista actualizado.' : 'Arista añadida correctamente.',
+      'success'
+    );
+  }
+
+  function updateControls() {
+    const opts = nodes.map(n =>
+      `<option value="${esc(n)}">${esc(n)}</option>`
+    ).join('');
+
+    ['fromNode', 'toNode', 'sourceNode', 'targetNode'].forEach(id => {
+      const el = $(id);
+      const old = el.value;
+
+      el.innerHTML = opts;
+
+      if (nodes.includes(old)) el.value = old;
+    });
+
+    $('nodeCount').textContent = nodes.length;
+    $('edgeCount').textContent = edges.length;
+    $('addEdge').disabled = nodes.length < 2;
+    $('startBtn').disabled = nodes.length < 2;
+
+    $('edgeList').innerHTML = edges.map((e, i) =>
+      `<li>
+        <span class="edge-label">${esc(e.from)} → ${esc(e.to)}</span>
+        <span class="weight">${e.weight}</span>
+        <button class="remove" data-edge="${i}" aria-label="Eliminar arista" title="Eliminar arista">×</button>
+      </li>`
+    ).join('');
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[c]));
+  }
+
+  function el(tag, attrs = {}, text) {
+    const x = document.createElementNS(NS, tag);
+
+    Object.entries(attrs).forEach(([k, v]) => {
+      x.setAttribute(k, v);
+    });
+
+    if (text !== undefined) x.textContent = text;
+
+    return x;
+  }
+
+  function edgeKey(e) {
+    return e.from + '→' + e.to;
+  }
+
+  function renderGraph() {
+    svg.innerHTML = '';
+
+    const defs = el('defs');
+
+    const marker = el('marker', {
+      id: 'arrow',
+      markerWidth: 9,
+      markerHeight: 9,
+      refX: 7,
+      refY: 3,
+      orient: 'auto',
+      markerUnits: 'strokeWidth'
+    });
+
+    marker.appendChild(el('path', {
+      d: 'M0,0 L0,6 L8,3 z',
+      fill: '#7187a2'
+    }));
+
+    defs.appendChild(marker);
+
+    const activeMarker = el('marker', {
+      id: 'arrowActive',
+      markerWidth: 9,
+      markerHeight: 9,
+      refX: 7,
+      refY: 3,
+      orient: 'auto',
+      markerUnits: 'strokeWidth'
+    });
+
+    activeMarker.appendChild(el('path', {
+      d: 'M0,0 L0,6 L8,3 z',
+      fill: '#ffc66d'
+    }));
+
+    defs.appendChild(activeMarker);
+    svg.appendChild(defs);
+
+    const pathEdges = new Set();
+
+    if (state.path && state.path.length > 1) {
+      for (let i = 0; i < state.path.length - 1; i++) {
+        pathEdges.add(state.path[i] + '→' + state.path[i + 1]);
+      }
+    }
+
+    edges.forEach(e => {
+      const p1 = positions[e.from];
+      const p2 = positions[e.to];
+
+      if (!p1 || !p2) return;
+
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len;
+      const uy = dy / len;
+
+      const x1 = p1.x + ux * R;
+      const y1 = p1.y + uy * R;
+      const x2 = p2.x - ux * (R + 5);
+      const y2 = p2.y - uy * (R + 5);
+
+      const key = edgeKey(e);
+      const active = state.activeEdge === key;
+      const isPath = pathEdges.has(key);
+
+      const mx = (x1 + x2) / 2;
+      const my = (y1 + y2) / 2;
+
+      const line = el('line', {
+        x1, y1, x2, y2,
+        class: 'edge' + (active ? ' active' : '') + (isPath ? ' path' : ''),
+        'marker-end': active ? 'url(#arrowActive)' : 'url(#arrow)'
+      });
+
+      svg.appendChild(line);
+
+      const label = el('text', {
+        x: mx - uy * 13,
+        y: my + ux * 13,
+        class: 'edge-label-svg'
+      }, e.weight);
+
+      svg.appendChild(label);
+    });
+
+    nodes.forEach(n => {
+      const p = positions[n];
+      if (!p) return;
+
+      let cls = 'node';
+
+      if (n === $('sourceNode').value) cls += ' source';
+      if (n === $('targetNode').value) cls += ' target';
+      if (n === state.current) cls += ' current';
+      if ((state.visited || []).includes(n)) cls += ' visited';
+      if ((state.path || []).includes(n)) cls += ' path-node';
+
+      const g = el('g', {
+        class: cls,
+        transform: `translate(${p.x},${p.y})`,
+        tabindex: 0,
+        role: 'button',
+        'aria-label': 'Nodo ' + n
+      });
+
+      g.appendChild(el('circle', { r: R }));
+      g.appendChild(el('text', { y: -1 }, n));
+
+      if (state.dist && state.dist[n] !== undefined) {
+        const d = state.dist[n] === Infinity ? '∞' : state.dist[n];
+        g.appendChild(el('text', { y: 40, class: 'dist' }, 'd=' + d));
+      }
+
+      g.addEventListener('pointerdown', ev => {
+        dragNode = n;
+        try { svg.setPointerCapture(ev.pointerId); } catch (_) {}
+      });
+
+      g.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          $('sourceNode').value = n;
+          renderGraph();
+        }
+      });
+
+      svg.appendChild(g);
+    });
+
+    $('emptyState').style.display = nodes.length ? 'none' : 'grid';
+  }
+
+  function createSteps() {
+    const source = $('sourceNode').value;
+    const target = $('targetNode').value;
+
+    if (!source || !target) {
+      notify('Selecciona el nodo de inicio y el destino.');
+      return null;
+    }
+
+    if (source === target) {
+      notify('El inicio y el destino deben ser distintos.');
+      return null;
+    }
+
+    const dist = {};
+    const prev = {};
+    const visited = [];
+
+    nodes.forEach(n => {
+      dist[n] = Infinity;
+      prev[n] = null;
+    });
+
+    dist[source] = 0;
+
+    const snapshot = (message, current = null, activeEdge = null, done = false, path = []) => {
+      steps.push({
+        message,
+        dist: { ...dist },
+        prev: { ...prev },
+        visited: [...visited],
+        current,
+        activeEdge,
+        done,
+        path: [...path]
+      });
+    };
+
+    snapshot(
+      `Inicialización: la distancia desde ${source} hasta sí mismo es 0. Las demás distancias comienzan en ∞.`
+    );
+
+    while (true) {
+      let current = null;
+      let best = Infinity;
+
+      for (const n of nodes) {
+        if (!visited.includes(n) && dist[n] < best) {
+          best = dist[n];
+          current = n;
+        }
+      }
+
+      if (current === null) {
+        snapshot(
+          'No quedan nodos alcanzables sin visitar. El algoritmo ha terminado.',
+          null, null, true
+        );
+        break;
+      }
+
+      visited.push(current);
+
+      snapshot(
+        `Seleccionamos ${current}, que tiene la menor distancia provisional (${dist[current]}). Marcamos el nodo como visitado.`,
+        current
+      );
+
+      if (current === target) {
+        snapshot(
+          `Llegamos al destino ${target}. Ya conocemos su distancia mínima: ${dist[target]}.`,
+          current, null, true
+        );
+        break;
+      }
+
+      const outgoing = edges.filter(e => e.from === current);
+
+      if (!outgoing.length) {
+        snapshot(
+          `El nodo ${current} no tiene aristas salientes. Continuamos con el siguiente nodo disponible.`,
+          current
+        );
+      }
+
+      for (const e of outgoing) {
+        const alt = dist[current] + e.weight;
+
+        snapshot(
+          `Evaluamos ${e.from} → ${e.to}: ${dist[current]} + ${e.weight} = ${alt}.`,
+          current,
+          edgeKey(e)
+        );
+
+        if (alt < dist[e.to]) {
+          const old = dist[e.to];
+
+          dist[e.to] = alt;
+          prev[e.to] = current;
+
+          snapshot(
+            `Mejora encontrada: la distancia de ${e.to} cambia de ${old === Infinity ? '∞' : old} a ${alt}. Su predecesor ahora es ${current}.`,
+            current,
+            edgeKey(e)
+          );
+        } else {
+          snapshot(
+            `No mejora la distancia de ${e.to}: ${dist[e.to] === Infinity ? '∞' : dist[e.to]} es menor o igual que ${alt}.`,
+            current,
+            edgeKey(e)
+          );
+        }
+      }
+    }
+
+    const path = [];
+
+    if (dist[target] !== Infinity) {
+      let n = target;
+      let guard = 0;
+
+      while (n !== null && guard++ <= nodes.length) {
+        path.unshift(n);
+        n = prev[n];
+      }
+    }
+
+    const last = steps[steps.length - 1];
+
+    if (last) {
+      last.path = path;
+      last.dist = { ...dist };
+      last.prev = { ...prev };
+      last.visited = [...visited];
+      last.done = true;
+    }
+
+    return { source, target, dist, prev, path };
+  }
+
+  function runAlgorithm() {
+    stopPlay();
+
+    if (nodes.length < 2) {
+      return notify('Añade al menos dos nodos para ejecutar Dijkstra.');
+    }
+
+    if (edges.some(e => e.weight < 0)) {
+      return notify('Dijkstra no admite pesos negativos.');
+    }
+
+    steps = [];
+
+    const result = createSteps();
+    if (!result) return;
+
+    $('runStatus').textContent = 'EN CURSO';
+    $('runStatus').className = 'status running';
+
+    stepIndex = 0;
+    showStep();
+
+    $('prevBtn').disabled = true;
+    $('nextBtn').disabled = steps.length <= 1;
+    $('playBtn').disabled = steps.length <= 1;
+  }
+
+  function showStep() {
+    if (stepIndex < 0 || stepIndex >= steps.length) return;
+
+    state = steps[stepIndex];
+
+    $('explanation').textContent = state.message;
+    $('progressBar').style.width = ((stepIndex + 1) / steps.length * 100) + '%';
+
+    $('prevBtn').disabled = stepIndex === 0;
+    $('nextBtn').disabled = stepIndex === steps.length - 1;
+    $('playBtn').disabled = steps.length <= 1;
+
+    const tbody = $('distanceTable');
+    tbody.innerHTML = '';
+
+    nodes.forEach(n => {
+      const tr = document.createElement('tr');
+
+      if (n === state.current) tr.className = 'current-row';
+
+      const d = state.dist[n] === undefined
+        ? '—'
+        : state.dist[n] === Infinity
+          ? '∞'
+          : state.dist[n];
+
+      const predecessor = state.prev[n] === undefined || state.prev[n] === null
+        ? '—'
+        : esc(state.prev[n]);
+
+      tr.innerHTML = `<td><strong>${esc(n)}</strong></td><td>${d}</td><td>${predecessor}</td>`;
+      tbody.appendChild(tr);
+    });
+
+    const target = $('targetNode').value;
+
+    if (state.done) {
+      $('runStatus').textContent = 'FINALIZADO';
+      $('runStatus').className = 'status done';
+
+      if (state.path.length) {
+        $('routeText').textContent = state.path.join(' → ');
+        $('routeCost').textContent = 'Costo total: ' + state.dist[target];
+        $('bestDistance').textContent = state.dist[target];
+        $('graphState').textContent = 'Ruta mínima encontrada';
+      } else {
+        $('routeText').textContent = 'No existe una ruta';
+        $('routeCost').textContent = 'El destino no es alcanzable desde el origen.';
+        $('bestDistance').textContent = '∞';
+        $('graphState').textContent = 'Destino inalcanzable';
+      }
+
+      stopPlay();
+    } else {
+      $('runStatus').textContent = 'EN CURSO';
+      $('runStatus').className = 'status running';
+      $('graphState').textContent = `Paso ${stepIndex + 1} de ${steps.length}`;
+    }
+
+    renderGraph();
+  }
+
+  function next() {
+    if (stepIndex < steps.length - 1) {
+      stepIndex++;
+      showStep();
+    }
+  }
+
+  function prev() {
+    if (stepIndex > 0) {
+      stepIndex--;
+      showStep();
+    }
+  }
+
+  function togglePlay() {
+    if (timer) {
+      stopPlay();
+      return;
+    }
+
+    if (!steps.length) return;
+
+    if (stepIndex >= steps.length - 1) stepIndex = 0;
+
+    $('playBtn').textContent = 'Ⅱ Pausar';
+
+    timer = setInterval(() => {
+      if (stepIndex >= steps.length - 1) {
+        stopPlay();
+        return;
+      }
+
+      next();
+    }, Number($('speed').value));
+
+    showStep();
+  }
+
+  function sample() {
+    stopPlay();
+
+    nodes = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+    edges = [
+      { from: 'A', to: 'B', weight: 4 },
+      { from: 'A', to: 'C', weight: 2 },
+      { from: 'C', to: 'B', weight: 1 },
+      { from: 'B', to: 'D', weight: 5 },
+      { from: 'C', to: 'D', weight: 8 },
+      { from: 'C', to: 'E', weight: 10 },
+      { from: 'D', to: 'E', weight: 2 },
+      { from: 'D', to: 'F', weight: 6 },
+      { from: 'E', to: 'F', weight: 3 }
+    ];
+
+    positions = {
+      A: { x: 130, y: 250 },
+      B: { x: 330, y: 125 },
+      C: { x: 330, y: 370 },
+      D: { x: 540, y: 180 },
+      E: { x: 650, y: 370 },
+      F: { x: 790, y: 250 }
+    };
+
+    updateControls();
+    $('sourceNode').value = 'A';
+    $('targetNode').value = 'F';
+
+    resetRun();
+    renderGraph();
+
+    notify('Ejemplo cargado. Ejecuta Dijkstra para explorar la solución.', 'success');
+  }
+
+  function clearAll() {
+    stopPlay();
+
+    nodes = [];
+    edges = [];
+    positions = {};
+
+    updateControls();
+    resetRun();
+    renderGraph();
+  }
+
+  $('addNode').addEventListener('click', () => {
+    addNode($('nodeName').value);
+  });
+
+  $('nodeName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addNode($('nodeName').value);
+  });
+
+  $('addEdge').addEventListener('click', addEdge);
+
+  $('edgeList').addEventListener('click', e => {
+    const b = e.target.closest('[data-edge]');
+    if (!b) return;
+
+    edges.splice(Number(b.dataset.edge), 1);
+
+    updateControls();
+    resetRun();
+    renderGraph();
+  });
+
+  $('startBtn').addEventListener('click', runAlgorithm);
+  $('prevBtn').addEventListener('click', prev);
+  $('nextBtn').addEventListener('click', next);
+  $('playBtn').addEventListener('click', togglePlay);
+  $('sampleBtn').addEventListener('click', sample);
+  $('clearBtn').addEventListener('click', clearAll);
+
+  ['sourceNode', 'targetNode'].forEach(id => {
+    $(id).addEventListener('change', () => {
+      resetRun();
+      renderGraph();
+    });
+  });
+
+  $('speed').addEventListener('change', () => {
+    if (timer) {
+      stopPlay();
+      togglePlay();
+    }
+  });
+
+  svg.addEventListener('pointermove', e => {
+    if (!dragNode) return;
+
+    const rect = svg.getBoundingClientRect();
+
+    const x = (e.clientX - rect.left) / rect.width * W;
+    const y = (e.clientY - rect.top) / rect.height * H;
+
+    positions[dragNode] = {
+      x: Math.max(R + 8, Math.min(W - R - 8, x)),
+      y: Math.max(R + 8, Math.min(H - R - 8, y))
+    };
+
+    renderGraph();
+  });
+
+  svg.addEventListener('pointerup', () => {
+    dragNode = null;
+  });
+
+  svg.addEventListener('pointercancel', () => {
+    dragNode = null;
+  });
+
+  updateControls();
+  sample();
+})();
+</script>
+
+</body>
+</html>
